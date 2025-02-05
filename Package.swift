@@ -13,7 +13,9 @@ let package = Package(
             targets: ["SwiftyArk"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.9.1"))
+        .package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.9.1")),
+        .package(url: "https://github.com/Flight-School/AnyCodable.git", from: "0.6.0"),
+        .package(url: "https://github.com/GottaGetSwifty/CodableWrappers.git", from: "3.0.1"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -22,6 +24,8 @@ let package = Package(
             name: "SwiftyArk",
             dependencies: [
                 "Alamofire",
+                "AnyCodable",
+                "CodableWrappers",
             ]),
         .testTarget(
             name: "SwiftyArkTests",
