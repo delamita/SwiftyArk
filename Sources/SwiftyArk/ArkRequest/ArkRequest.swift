@@ -49,15 +49,13 @@ extension ArkRequestProtocol {
                                  encoding: JSONEncoding.default,
                                  headers: headers)
         
-        let respone = try await request.serializingData().value
-        // 解码为 ArkChatResponse
-        do {
-            let decodedResponse = try JSONDecoder().decode(ArkChatResponse.self, from: respone)
-            self.response = decodedResponse
-            return decodedResponse
-        } catch {
-            throw error
-        }
+        let responseString = try await request.serializingString().value
+        print("🧾 原始响应数据:", responseString)
+        let data = Data(responseString.utf8)
+        let decodedResponse = try JSONDecoder().decode(ArkChatResponse.self, from: data)
+        self.response = decodedResponse
+        return decodedResponse
+        throw URLError(.badServerResponse)
     }
 
     /// 默认实现：执行工具调用请求。
@@ -95,4 +93,3 @@ public struct ArkRequest: ArkRequestProtocol {
         self.modelConfig = modelConfig
     }
 }
-
