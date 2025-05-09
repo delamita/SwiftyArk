@@ -55,7 +55,6 @@ extension ArkRequestProtocol {
         let decodedResponse = try JSONDecoder().decode(ArkChatResponse.self, from: data)
         self.response = decodedResponse
         return decodedResponse
-        throw URLError(.badServerResponse)
     }
 
     /// 默认实现：执行工具调用请求。

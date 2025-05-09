@@ -7,6 +7,80 @@
 
 import Foundation
 
+
+// MARK: - Usage
+/// Token 使用情况。
+public struct Usage: Codable, CustomStringConvertible {
+    /// 输入的 prompt token 数量。
+    public let promptTokens: Int
+
+    /// 模型生成的 token 数量。
+    public let completionTokens: Int
+
+    /// 本次请求消耗的总 token 数量（输入 + 输出）。
+    public let totalTokens: Int
+
+    /// 命中上下文缓存的 tokens 细节。
+    ///
+    /// - Note: 本接口暂不支持该字段。此处应为 0。
+    public let promptTokensDetails: PromptTokensDetails?
+
+    /// 输出思维链内容花费的 token 细节。
+    ///
+    /// - Note: 支持输出思维链的模型才能返回该字段。
+    public let completionTokensDetails: CompletionTokensDetails?
+    
+    
+    /// Prompt 输入 token 细节。
+    ///
+    /// - Note: 本接口暂不支持该字段，通常为 0。
+    public struct PromptTokensDetails: Codable {
+        /// 命中上下文缓存的 token 数量。
+        public let cachedTokens: Int?
+        
+        private enum CodingKeys: String, CodingKey {
+            case cachedTokens = "cached_tokens"
+        }
+    }
+
+    /// Completion 输出 token 细节。
+    ///
+    /// - Note: 支持输出思维链的模型才能返回该字段。
+    public struct CompletionTokensDetails: Codable {
+        /// 输出思维链内容消耗的 token 数量。
+        public let reasoningTokens: Int?
+        
+        private enum CodingKeys: String, CodingKey {
+            case reasoningTokens = "reasoning_tokens"
+        }
+    }
+    
+    
+    private enum CodingKeys: String, CodingKey {
+        case promptTokens = "prompt_tokens"
+        case completionTokens = "completion_tokens"
+        case totalTokens = "total_tokens"
+        case promptTokensDetails = "prompt_tokens_details"
+        case completionTokensDetails = "completion_tokens_details"
+    }
+
+    /// 便于直接打印更完整的 token 消耗信息。
+    public var description: String {
+        var parts = [
+            "prompt: \(promptTokens)",
+            "completion: \(completionTokens)",
+            "total: \(totalTokens)"
+        ]
+        if let cached = promptTokensDetails?.cachedTokens {
+            parts.append("prompt_cached: \(cached)")
+        }
+        if let reasoning = completionTokensDetails?.reasoningTokens {
+            parts.append("completion_reasoning: \(reasoning)")
+        }
+        return parts.joined(separator: ", ")
+    }
+}
+
 // MARK: - ArkResponse
 
 /// 表示所有 Ark 请求响应的通用协议。
@@ -23,6 +97,12 @@ public protocol ArkResponse: Codable {
     ///
     /// 此时间戳表示服务器返回响应的时间，用于记录和调试。
     var created: Int { get }
+    
+    
+    /// Token 消耗统计信息。
+    ///
+    /// 本次请求的 token 用量。
+    var usage: Usage { get }
 
     /// 本次请求使用的模型名称。
     ///
@@ -63,6 +143,9 @@ public struct ArkChatResponse: ArkChatResponseProtocol {
     /// 包含对话选项的数组。
     public let choices: [Choice]
 
+    /// Token 消耗统计信息。
+    public let usage: Usage
+
     /// 聊天响应的选项。
     public struct Choice: Codable {
         /// 消息的详细内容。
@@ -87,7 +170,8 @@ public struct ArkChatResponse: ArkChatResponseProtocol {
     ///
     /// - Returns: 一个 `String`，描述当前响应对象的内容。
     public func description() -> String {
-        return "ArkChatResponse(id: \(id), choices: \(choices.map { $0.message.content }))"
+        let tokenInfo = "\(usage.totalTokens) tokens"
+        return "ArkChatResponse(id: \(id), tokens: \(tokenInfo), choices: \(choices.map { $0.message.content }))"
     }
 }
 
@@ -130,12 +214,16 @@ public struct ArkToolResponse: ArkToolResponseProtocol {
 
     /// 工具调用的结果。
     public let result: String?
+    
+    /// Token 消耗统计信息。
+    public let usage: Usage
 
     /// 提供响应对象的描述信息。
     ///
-    /// - Returns: 一个 `String`，描述当前工具调用响应的内容。
+    /// - Returns: 一个 `String`，描述当前工具调用响应的内容，包括 tokens 消耗信息。
     public func description() -> String {
-        return "ArkToolResponse(id: \(id), tool: \(tool), status: \(status), result: \(result ?? "nil"))"
+        let tokenInfo = "\(usage.totalTokens) tokens"
+        return "ArkToolResponse(id: \(id), tool: \(tool), status: \(status), tokens: \(tokenInfo), result: \(result ?? "nil"))"
     }
 }
 
@@ -173,8 +261,14 @@ public struct StreamChatResponse: ArkChatResponseProtocol, ArkStreamResponseProt
     // ArkStreamResponseProtocol 的属性
     public var streamContent: [String]
 
-    // 提供描述信息
+    /// Token 消耗统计信息。
+    public let usage: Usage
+    
+    /// 提供响应对象的描述信息。
+    ///
+    /// - Returns: 一个 `String`，描述当前流式聊天响应对象的内容，包括 tokens 消耗信息。
     public func description() -> String {
-        return "StreamChatResponse(id: \(id), model: \(model), choices: \(choices.count), isStreaming: true)"
+        let tokenInfo = "\(usage.totalTokens) tokens"
+        return "StreamChatResponse(id: \(id), model: \(model), tokens: \(tokenInfo), choices: \(choices.count), isStreaming: true)"
     }
 }
